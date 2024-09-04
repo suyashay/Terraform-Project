@@ -134,7 +134,7 @@ resource "aws_instance" "webserver1" {
   user_data              = file("install_apache.sh")
 
   tags = {
-    Name = "Web Server"
+    Name = "Web Server-1"
   }
 
   provisioner "file" {
