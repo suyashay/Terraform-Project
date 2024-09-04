@@ -2,7 +2,7 @@ terraform {
   required_providers {
     aws = {
       source  = "hashicorp/aws"
-      version = "5.31.0"
+      version = "~> 5.0"
     }
   }
 }
@@ -130,24 +130,19 @@ resource "aws_instance" "webserver1" {
   ami                    = "ami-02c21308fed24a8ab"
   instance_type          = "t2.micro"
   availability_zone      = "us-east-1a"
-  key_name               = "jrb"
+  key_name               = "abc"
   vpc_security_group_ids = [aws_security_group.webserver-sg.id]
   subnet_id              = aws_subnet.web-subnet-1.id
-  user_data              = file("install_apache.sh")
-
+  user_data              = <<EOF
+#!/bin/bash
+sudo -i
+yum install httpd -y
+systemctl start httpd
+chkconfig httpd on
+echo "hai all this is my app created by terraform infrastructurte by raham sir server-1" > /var/www/html/index.html
+EOF
   tags = {
-    Name = "Web Server-1"
-  }
-
-  provisioner "file" {
-    source      = "/var/lib/jenkins/workspace/terraformpipeline/index.html"
-    destination = "/var/www/html/index.html"
-
-  connection {
-      type        = "ssh"
-      host        = self.public_ip
-      user        = "ec2-user"
-    }
+    Name = "web-server-1"
   }
 }
 
@@ -155,24 +150,19 @@ resource "aws_instance" "webserver2" {
   ami                    = "ami-02c21308fed24a8ab"
   instance_type          = "t2.micro"
   availability_zone      = "us-east-1b"
-  key_name               = "jrb"
+  key_name               = "abc"
   vpc_security_group_ids = [aws_security_group.webserver-sg.id]
   subnet_id              = aws_subnet.web-subnet-2.id
-  user_data              = file("install_apache.sh")
-
+  user_data              = <<EOF
+#!/bin/bash
+sudo -i
+yum install httpd -y
+systemctl start httpd
+chkconfig httpd on
+echo "hai all this is my website created by terraform infrastructurte by raham sir server-2" > /var/www/html/index.html
+EOF
   tags = {
-    Name = "Web Server-2"
-  }
-
-  provisioner "file" {
-    source      = "/var/lib/jenkins/workspace/terraformpipeline/index.html"
-    destination = "/var/www/html/index.html"
-
-   connection {
-      type        = "ssh"
-      host        = self.public_ip
-      user        = "ec2-user"
-    }
+    Name = "web-server-2"
   }
 }
 
@@ -209,66 +199,24 @@ resource "aws_security_group" "webserver-sg" {
   }
 }
 
-# Create Application Security Group
-resource "aws_security_group" "appserver-sg" {
-  name        = "appserver-SG"
-  description = "Allow inbound traffic from ALB"
-  vpc_id      = aws_vpc.my-vpc.id
-
-  ingress {
-    description = "Allow traffic from web layer"
-    from_port   = 80
-    to_port     = 80
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
- ingress {
-    description = "Allow traffic from web layer"
-    from_port   = 22
-    to_port     = 22
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  tags = {
-    Name = "appserver-SG"
-  }
+# Create S3 Bucket
+resource "aws_s3_bucket" "s3-bucket" {
+  bucket = "suyasha-s3-bucket"
 }
 
-# Create Database Security Group
-resource "aws_security_group" "database-sg" {
-  name        = "Database-SG"
-  description = "Allow inbound traffic from application layer"
-  vpc_id      = aws_vpc.my-vpc.id
-
-  ingress {
-    description = "Allow traffic from application layer"
-    from_port   = 3306
-    to_port     = 3306
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  egress {
-    from_port   = 32768
-    to_port     = 65535
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  tags = {
-    Name = "Database-SG"
-  }
+# Create IAM Users
+resource "aws_iam_user" "iam-user" {
+for_each = var.user_names
+name = each.value
 }
 
+variable "user_names" {
+description = "*"
+type = set(string)
+default = ["user1", "user2", "user3", "user4"]
+}
+
+# Create Load Balancer
 resource "aws_lb" "external-elb" {
   name               = "External-LB"
   internal           = false
@@ -315,6 +263,7 @@ resource "aws_lb_listener" "external-elb" {
   }
 }
 
+# Create RDS 
 /*resource "aws_db_instance" "default" {
   allocated_storage      = 10
   db_subnet_group_name   = aws_db_subnet_group.default.id
