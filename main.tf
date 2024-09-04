@@ -133,16 +133,21 @@ resource "aws_instance" "webserver1" {
   key_name               = "abc"
   vpc_security_group_ids = [aws_security_group.webserver-sg.id]
   subnet_id              = aws_subnet.web-subnet-1.id
-  user_data              = <<EOF
-#!/bin/bash
-sudo -i
-yum install httpd -y
-systemctl start httpd
-chkconfig httpd on
-echo "hai all this is my app created by terraform infrastructurte by raham sir server-1" > /var/www/html/index.html
-EOF
+  user_data              = file("install_apache.sh")
+
   tags = {
     Name = "web-server-1"
+  }
+
+  provisioner "file" {
+    source      = "/var/lib/jenkins/workspace/terraformpipeline/index.html"
+    destination = "/var/www/html/index.html"
+
+   connection {
+      type        = "ssh"
+      host        = self.public_ip
+      user        = "ec2-user"
+    }
   }
 }
 
@@ -153,16 +158,21 @@ resource "aws_instance" "webserver2" {
   key_name               = "abc"
   vpc_security_group_ids = [aws_security_group.webserver-sg.id]
   subnet_id              = aws_subnet.web-subnet-2.id
-  user_data              = <<EOF
-#!/bin/bash
-sudo -i
-yum install httpd -y
-systemctl start httpd
-chkconfig httpd on
-echo "hai all this is my website created by terraform infrastructurte by raham sir server-2" > /var/www/html/index.html
-EOF
-  tags = {
+  user_data              = file("install_apache.sh")
+  
+   tags = {
     Name = "web-server-2"
+  }
+
+  provisioner "file" {
+    source      = "/var/lib/jenkins/workspace/terraformpipeline/index.html"
+    destination = "/var/www/html/index.html"
+
+   connection {
+      type        = "ssh"
+      host        = self.public_ip
+      user        = "ec2-user"
+    }
   }
 }
 
