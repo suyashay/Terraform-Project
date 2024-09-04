@@ -4,7 +4,7 @@ pipeline {
     stages {
         stage('checkout') {
             steps {
-                git ''
+                git 'https://github.com/suyashay/Terraform-Project.git'
             }
         }
         stage('init') {
